@@ -1,0 +1,113 @@
+package com.ecommerce;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.FileOutputStream;
+import java.time.LocalDateTime;
+import java.util.Random;
+
+public class FlashSaleDataGenerator {
+
+    private static final int TOTAL_ROWS = 12000;
+
+    public static void main(String[] args) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+
+            Sheet sheet = workbook.createSheet("Order_FlashSale_Raw");
+            createHeader(sheet);
+            generateData(sheet);
+
+            try (FileOutputStream fos =
+                         new FileOutputStream("flashsale_orders_raw.xlsx")) {
+                workbook.write(fos);
+            }
+
+            System.out.println("✅ File generated: flashsale_orders_raw.xlsx");
+            System.out.println("📄 Total rows: " + TOTAL_ROWS);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void createHeader(Sheet sheet) {
+        Row header = sheet.createRow(0);
+        String[] headers = {
+                "order_id", "user_id", "shop_id", "product_id", "variant_id",
+                "size", "color", "quantity", "unit_price",
+                "voucher_code", "discount_value", "order_time", "order_status"
+        };
+
+        for (int i = 0; i < headers.length; i++) {
+            header.createCell(i).setCellValue(headers[i]);
+        }
+    }
+
+    private static void generateData(Sheet sheet) {
+        Random random = new Random();
+
+        for (int i = 1; i <= TOTAL_ROWS; i++) {
+            Row row = sheet.createRow(i);
+
+            Object quantity = random.nextInt(5) + 1;
+            Object unitPrice = 10000 + random.nextInt(90000);
+            Object discount = random.nextInt(30000);
+
+            // === CÀI CẮM LỖI DỮ LIỆU ===
+            if (i % 50 == 0) quantity = -2;
+            if (i % 77 == 0) quantity = "two";
+            if (i % 90 == 0) unitPrice = "12O000";
+            if (i % 120 == 0) discount = 999999;
+            if (i % 150 == 0) discount = null;
+            if (i % 200 == 0) unitPrice = "";
+
+            Object orderTime = LocalDateTime
+                    .of(2025, 7, (i % 28) + 1, 10, 0)
+                    .toString();
+            if (i % 88 == 0) orderTime = "32/13/2025";
+
+            Object status = switch (i % 3) {
+                case 0 -> "PENDING";
+                case 1 -> "PAID";
+                default -> "CANCELLED";
+            };
+            if (i % 111 == 0) status = "SUCCESSFULL";
+
+            Object size = new String[]{"S", "M", "L", "XL"}[i % 4];
+            if (i % 95 == 0) size = 123;
+
+            Object color = new String[]{"Red", "Blue", "Black"}[i % 3];
+            if (i % 130 == 0) color = null;
+
+            Object voucher = (i % 4 == 0) ? "FS10K" : "";
+            if (i % 170 == 0) voucher = "###";
+
+            write(row, 0, "ORD" + (100000 + i));
+            write(row, 1, "U" + random.nextInt(3000));
+            write(row, 2, "S" + random.nextInt(200));
+            write(row, 3, "P" + random.nextInt(500));
+            write(row, 4, "V" + random.nextInt(2000));
+            write(row, 5, size);
+            write(row, 6, color);
+            write(row, 7, quantity);
+            write(row, 8, unitPrice);
+            write(row, 9, voucher);
+            write(row, 10, discount);
+            write(row, 11, orderTime);
+            write(row, 12, status);
+        }
+    }
+
+    private static void write(Row row, int col, Object value) {
+        Cell cell = row.createCell(col);
+
+        if (value == null) {
+            cell.setBlank();
+        } else if (value instanceof Number) {
+            cell.setCellValue(((Number) value).doubleValue());
+        } else {
+            cell.setCellValue(value.toString());
+        }
+    }
+}
