@@ -245,3 +245,273 @@ product_id không cần thiết vì đã có thể truy ngược qua variant_id.
 Đây là cách thiết kế chuẩn hóa dữ liệu (normalization) để tránh dư thừa và đảm bảo tính nhất quán.
 
 Bạn có muốn mình giải thích thêm về chuẩn hóa dữ liệu (database normalization) và tại sao thiết kế như vậy giúp hệ thống e-commerce dễ mở rộng, tránh lỗi khi cập nhật không?
+
+Voucher
+•	voucher_id
+•	code
+•	discount_type
+•	discount_value
+•	min_order_amount
+•	voucher_scope
+•	stackable
+•	priority
+OrderVoucher
+•	id (PK)
+•	order_id (FK)
+•	voucher_id (FK)
+•	discount_amount
+đây là hai trường mới cập nhật như thế này để đáp ứng yêu cầu tính toán khuyến mãi chồng chéo, hãy xác định lại mối quan hệ giúp tôi
+Rất chuẩn Vinh 👌, với việc bạn bổ sung bảng Voucher và OrderVoucher, quan hệ trong hệ thống sẽ thay đổi như sau:
+
+🎟 Voucher
+voucher_id (PK): định danh voucher.
+
+Các thuộc tính mới (discount_type, scope, stackable, priority) giúp mô tả logic khuyến mãi phức tạp.
+
+Một Voucher có thể được áp dụng cho nhiều Order → quan hệ N–N với Order.
+
+📑 OrderVoucher (bảng trung gian)
+id (PK): định danh dòng quan hệ.
+
+order_id (FK → Order): đơn hàng nào đang dùng voucher.
+
+voucher_id (FK → Voucher): voucher nào được áp dụng.
+
+discount_amount: số tiền giảm thực tế sau khi tính toán.
+
+Đây là bảng giải quyết quan hệ N–N giữa Order và Voucher.
+
+🧾 Order
+order_id (PK): định danh đơn hàng.
+
+Một Order có thể có nhiều Voucher (qua bảng OrderVoucher).
+
+📊 Quan hệ tổng thể sau cập nhật
+User – Order: 1–N
+
+Order – OrderItem – ProductVariant: N–N (qua OrderItem)
+
+Order – Voucher: N–N (qua OrderVoucher)
+
+Voucher – OrderVoucher: 1–N
+
+Order – OrderVoucher: 1–N
+
+✅ Kết luận
+Trước đây, nếu chỉ có một voucher/đơn hàng thì có thể để voucher_id trong bảng Order.
+
+Nhưng với yêu cầu khuyến mãi chồng chéo, bạn đã thiết kế đúng:
+
+Voucher mô tả quy tắc khuyến mãi.
+
+OrderVoucher làm bảng trung gian để lưu nhiều voucher cho một đơn hàng, kèm số tiền giảm thực tế.
+
+Đây là mô hình chuẩn hóa dữ liệu và đáp ứng được nghiệp vụ phức tạp.
+
+Bạn có muốn mình vẽ sơ đồ ERD trực quan (các bảng và mũi tên quan hệ) cho phần Voucher–OrderVoucher–Order để dễ hình dung hơn khi trình bày đề tài không?
+
+Order – OrderItem – ProductVariant: N–N (qua OrderItem) giải thích lại quan hệ này
+Ok Vinh, mình giải thích lại cho thật rõ ràng nhé 👇
+
+🧾 Các bảng liên quan
+Order: đơn hàng, mỗi đơn có thể chứa nhiều sản phẩm.
+
+ProductVariant: biến thể sản phẩm (ví dụ: áo thun size M màu đỏ).
+
+OrderItem: chi tiết đơn hàng, là bảng trung gian để nối Order và ProductVariant.
+
+🔗 Quan hệ thực tế
+Một Order có thể chứa nhiều ProductVariant (ví dụ: cùng lúc mua áo thun đỏ size M và giày size 42).
+
+Một ProductVariant cũng có thể xuất hiện trong nhiều Order (ví dụ: áo thun đỏ size M được nhiều khách đặt).
+
+Đây là quan hệ N–N (nhiều–nhiều) giữa Order và ProductVariant.
+
+👉 Để biểu diễn quan hệ N–N trong cơ sở dữ liệu quan hệ, ta cần một bảng trung gian: OrderItem.
+
+📊 Cách hoạt động của OrderItem
+order_id (FK → Order): biết chi tiết này thuộc đơn hàng nào.
+
+variant_id (FK → ProductVariant): biết chi tiết này là biến thể nào.
+
+quantity, price: số lượng và giá tại thời điểm đặt.
+
+Nhờ bảng này:
+
+Từ Order → qua OrderItem → ta biết đơn hàng gồm những biến thể nào.
+
+Từ ProductVariant → qua OrderItem → ta biết biến thể đó đã xuất hiện trong những đơn hàng nào.
+
+🛒 Ví dụ minh họa
+Order table
+
+order_id	user_id	total_amount
+1001	1	500
+ProductVariant table
+
+variant_id	product_id	size	color
+501	2001	M	Red
+502	2001	L	Blue
+OrderItem table
+
+order_item_id	order_id	variant_id	quantity	price
+9001	1001	501	2	200
+9002	1001	502	1	100
+👉 Đơn hàng 1001 gồm 2 áo thun đỏ size M và 1 áo thun xanh size L.
+👉 Biến thể 501 và 502 đều được liên kết với Order 1001 qua OrderItem.
+
+✅ Kết luận
+Order – ProductVariant là quan hệ N–N.
+
+OrderItem chính là bảng trung gian để giải quyết quan hệ này.
+
+Nhờ đó, hệ thống vừa biết đơn hàng gồm những biến thể nào, vừa biết biến thể nào đã được bán trong những đơn hàng nào.
+
+Bạn có muốn mình vẽ sơ đồ ERD trực quan (Order ↔ OrderItem ↔ ProductVariant) để dễ hình dung hơn không?
+
+
+giải thích lại relation
+Rất tốt Vinh 👌, mình sẽ giải thích lại toàn bộ quan hệ giữa các bảng trong ERD của bạn một cách rõ ràng, mạch lạc và có logic nghiệp vụ:
+
+🧑 User
+user_id (PK)
+
+Một người dùng có thể:
+
+Sở hữu nhiều Shop → 1–N với Shop
+
+Đặt nhiều Order → 1–N với Order
+
+🏬 Shop
+shop_id (PK)
+
+owner_id (FK → User)
+
+Một Shop:
+
+Thuộc về 1 User
+
+Có nhiều Product → 1–N với Product
+
+📦 Product
+product_id (PK)
+
+shop_id (FK → Shop)
+
+Một Product:
+
+Thuộc về 1 Shop
+
+Có nhiều ProductVariant → 1–N với ProductVariant
+
+🎨 ProductVariant
+variant_id (PK)
+
+product_id (FK → Product)
+
+Một ProductVariant:
+
+Thuộc về 1 Product
+
+Có thể xuất hiện trong nhiều OrderItem → 1–N với OrderItem
+
+🧾 Order
+order_id (PK)
+
+user_id (FK → User)
+
+Một Order:
+
+Thuộc về 1 User
+
+Có nhiều OrderItem → 1–N với OrderItem
+
+Có thể áp dụng nhiều Voucher → N–N với Voucher qua OrderVoucher
+
+📑 OrderItem
+order_item_id (PK)
+
+order_id (FK → Order)
+
+variant_id (FK → ProductVariant)
+
+Đây là bảng trung gian giữa Order và ProductVariant
+
+Giải quyết quan hệ N–N giữa Order và ProductVariant
+
+Một Order có nhiều ProductVariant
+
+Một ProductVariant có thể nằm trong nhiều Order
+
+🎟 Voucher
+voucher_id (PK)
+
+Một Voucher:
+
+Có thể được áp dụng cho nhiều Order → N–N với Order qua OrderVoucher
+
+🔗 OrderVoucher
+id (PK)
+
+order_id (FK → Order)
+
+voucher_id (FK → Voucher)
+
+discount_amount: số tiền giảm thực tế
+
+Đây là bảng trung gian để xử lý khuyến mãi chồng chéo
+
+Giải quyết quan hệ N–N giữa Order và Voucher
+
+📊 Tổng kết quan hệ
+Bảng A	Bảng B	Quan hệ	Ghi chú
+User	Shop	1–N	Một user có nhiều shop
+Shop	Product	1–N	Một shop có nhiều sản phẩm
+Product	ProductVariant	1–N	Một sản phẩm có nhiều biến thể
+User	Order	1–N	Một user có nhiều đơn hàng
+Order	ProductVariant	N–N	Qua OrderItem
+Order	Voucher	N–N	Qua OrderVoucher
+Nếu bạn muốn, mình có thể vẽ sơ đồ ERD trực quan với các mũi tên và quan hệ để bạn dễ trình bày trong đề tài hoặc báo cáo. Hoặc mình có thể viết đoạn mô tả nghiệp vụ bằng tiếng Anh để bạn dùng trong phần giải thích hệ thống. Bạn chọn nhé!
+
+một đơn hàng có thể có nhiều món đồ ?
+Đúng rồi Vinh 👌, một đơn hàng hoàn toàn có thể có nhiều món đồ — và đó là cách hệ thống thương mại điện tử thường hoạt động.
+
+🧾 Cách biểu diễn trong cơ sở dữ liệu
+Bảng Order
+Mỗi dòng là một đơn hàng duy nhất.
+
+Có các thông tin như: order_id, user_id, total_amount, order_date.
+
+Bảng OrderItem
+Là bảng chi tiết đơn hàng.
+
+Mỗi dòng là một món đồ trong đơn hàng.
+
+Có các thông tin: order_item_id, order_id, variant_id, quantity, price.
+
+👉 Một order_id có thể xuất hiện nhiều lần trong OrderItem, mỗi lần là một món hàng khác nhau.
+
+📊 Ví dụ minh họa
+Order table
+
+order_id	user_id	total_amount
+1001	1	500
+OrderItem table
+
+order_item_id	order_id	variant_id	quantity	price
+9001	1001	501	2	200
+9002	1001	502	1	100
+👉 Đơn hàng 1001 có 2 món đồ:
+
+2 cái áo đỏ size M (variant 501)
+
+1 cái áo xanh size L (variant 502)
+
+✅ Kết luận
+Một đơn hàng có thể có nhiều món đồ, và được biểu diễn bằng nhiều dòng trong bảng OrderItem.
+
+Đây là quan hệ 1–N giữa Order và OrderItem.
+
+Nhờ vậy, hệ thống có thể tính tổng tiền, kiểm tra tồn kho, và xử lý từng món riêng biệt.
+
+Bạn có muốn mình vẽ sơ đồ luồng dữ liệu từ Order → OrderItem → ProductVariant để bạn dễ trình bày trong đề tài không?
